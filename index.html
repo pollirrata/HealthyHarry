@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Healthy Harry</title>
+<style>
+
+body{
+	font-family: Arial;
+	font-size: 11px;
+}
+.gameinfo{
+	position: absolute; 
+	top: 50px; 
+	left: 500px; 
+	height: 270px; 
+	overflow: auto;
+	border: solid 1px #333333;
+	background-color: #79BDDF;
+}
+
+.gameinfo .section{
+	background-color: #79BDDF;
+	width: 450px;
+	padding: 5px;
+	padding-left: 10px;
+	color: white;
+	
+}
+
+.gameinfo strong{
+	font-weight: bold;
+	color: #236F95;
+	display: block;
+	background-color: white;
+	padding-left: 10px;
+}
+</style>
+<script type="text/javascript">
+window.addEventListener('load', eventWindowLoaded, false);
+
+function eventWindowLoaded() {
+	canvasApp();
+}
+function canvasSupport () {
+return true;
+}
+var canvasApp = function canvasApp() {
+	if (!canvasSupport()) {
+		return;
+	}
+
+	var heartImage = new Image();
+	heartImage.src = "heart.png";
+	var flagImage = new Image();
+	flagImage.src = "flag.png";
+	
+	function drawScreen() {
+		//console.log("draw");
+		//console.log(speed);
+		context.fillStyle = '#E2F0FE';
+		context.fillRect(0, 0, theCanvas.width, theCanvas.height);
+		context.strokeStyle = '#000000';
+		context.strokeRect(1, 1, theCanvas.width-2, theCanvas.height-2 );
+		
+		var xunits = Math.cos(items[0].angle * Math.PI / 180) * speed;
+		var yunits = Math.sin(items[0].angle * Math.PI / 180) * speed;
+		
+		if(!gameOver){
+			items[0].x += xunits;
+			if(items[0].x -items[0].radius > theCanvas.width){
+				items[0].x = 0;
+			}else if (items[0].x + items[0].radius < 0){
+				items[0].x = theCanvas.width;
+			}
+			items[0].y += yunits;
+			if(items[0].y - items[0].radius > theCanvas.height){
+				items[0].y = 25;
+			}else if (items[0].y + items[0].radius < 25){
+				items[0].y = theCanvas.height;
+			}
+		}
+		
+		for(i = items.length - 1; i >= 1; i --){
+			if(!gameOver){
+				items[i].x  		= items[i-1].x;
+				items[i].y  		= items[i-1].y ;
+				items[i].radius  	= items[i-1].radius;
+				items[i].angle  	= items[i-1].angle;
+			}
+				context.beginPath();
+				//gr =context.createRadialGradient(items[i].x,items[i].y + 2,1, items[i].x,items[i].y, 5);
+				halfradius = items[i].radius / 2;
+				gr = context.createLinearGradient(items[i].x-halfradius, items[i].y-halfradius, 
+													items[i].x-halfradius, items[i].y+halfradius);
+				gr.addColorStop(0,'#79BDDF');
+				gr.addColorStop(1,'#277AA3');
+				context.fillStyle = gr;
+				//context.fillStyle = "#79BDDF";
+				context.arc(items[i].x, items[i].y, items[i].radius, 0 , Math.PI * 2, true);
+				context.fill();
+				context.closePath();
+		}
+		
+		halfradius = items[0].radius / 2;
+		
+		gr = context.createLinearGradient(items[i].x-halfradius, items[i].y-halfradius, 
+													items[i].x-halfradius, items[i].y+halfradius);
+		gr.addColorStop(0,'#79BDDF');
+		gr.addColorStop(1,'#277AA3');
+		
+		context.fillStyle = gr;
+		context.beginPath();
+		context.arc(items[0].x, items[0].y, items[0].radius, 0 , Math.PI * 2, true);
+		context.fill();
+		context.closePath();
+		
+		if(!gameOver){
+			for(j = growSize * 2; j <= items.length-1; j++){
+				if(hitTest(items[0], items[j])){
+					gameOver = true;
+					if (lives == 0){
+						//todo: cancel screen refresh;
+					}
+					interval = null;					
+					startButton.disabled = false;
+					console.log("gameover");
+				}
+			}
+		}
+		
+		//add item
+		if(!gameOver && !itemPicked){
+			context.fillStyle = "transparent";
+			context.beginPath();
+			context.arc(item.x, item.y, item.radius, 0 , Math.PI * 2, true);
+			context.fill();
+			context.closePath();			
+			context.drawImage(itemImage, item.x - item.radius, item.y - item.radius,16,16);
+		};
+		if(!gameOver && !flagPicked){
+			context.fillStyle = "transparent";
+			context.beginPath();
+			context.arc(flag.x, flag.y, flag.radius, 0 , Math.PI * 2, true);
+			context.fill();
+			context.closePath();			
+			context.drawImage(flagImage, flag.x - flag.radius, flag.y - flag.radius,16,16);
+		};
+		
+		if(item != undefined && !itemPicked && hitTest(items[0], item) ){
+			score += item.id * 50;
+			if(++collectedItems >= 10 && flagPicked){
+				addFlag();
+				flagPicked = false;
+				collectedItems = 0;
+			}
+			console.log(collectedItems);
+			additem();
+			setTimeout(addItem, 2000);
+			itemPicked = true;
+		}
+		if(flag != undefined && !flagPicked && hitTest(items[0], flag) ){
+			score += 500;
+			level++;
+			speed += 0.5;
+			
+			flagPicked = true;
+		}
+		
+		drawHeader();
+	}
+
+	var theCanvas = document.getElementById("canvasOne");
+	var context = theCanvas.getContext("2d");
+	var interval = setInterval(drawScreen, 33);
+	setTimeout(addItem, 2000);
+	
+	var items = [];
+	var item = {id : 0, radius: 4, x:theCanvas.width/2, y: theCanvas.height/2, angle:0};
+	var speed = 3;
+	var level = 0;
+	var lives = 3;
+	var score = 0;
+	var growSize = 6;
+	var collectedItems = 0;
+	var gameOver = true;
+	var itemPicked = true;
+	var item;
+	var flag;
+	var flagPicked = true;
+	items.push(item);
+	for(i = 1; i <= 4; i++){
+		tmpitem = {id : i, radius: 4, x:theCanvas.width/2, y: theCanvas.height/2, angle:0};
+		items.push(tmpitem);
+	}
+	
+	var itemImage = new Image();
+	
+	function drawHeader(){
+		context.fillStyle = '#2E91C2';
+		context.fillRect(0, 0, theCanvas.width, 25);
+		
+		context.textBaseline = "top";
+		context.fillStyle = "white";
+		context.font = "12px Arial bold";
+		context.fillText ("Level " + level, 10, 5);
+		
+		context.textBaseline = "top";
+		context.fillStyle = "white";
+		context.font = "12px Arial bold";
+		context.fillText ("Score " + score, 60, 5);
+		
+		context.textBaseline = "top";
+		context.fillStyle = "white";
+		context.font = "12px Arial bold";
+		context.fillText ("Items " + collectedItems, 160, 5);
+		
+		for(hearts = lives; hearts > 0; hearts--){
+			context.drawImage(heartImage, theCanvas.width - 20 * hearts ,5, 16,16);
+		}
+	}
+	
+	function levelStart(){
+	
+		if(lives == 0){
+			level = 0;
+			score = 0;
+			lives = 3;
+			speed = 3;
+		}
+		collectedItems = 0;
+		items = null;
+		items = [];
+		lives --;
+		itemPicked = true;
+		gameOver = false;
+		flagPicked = true;
+		setTimeout(addItem, 2000);
+		item = {id : 0, radius: 4, x:theCanvas.width/2, y: theCanvas.height/2, angle:0};
+		items.push(item);
+		for(i = 1; i <= growSize; i++){
+			tmpitem = {id : i, radius: 4, x:theCanvas.width/2, y: theCanvas.height/2, angle:0};
+			items.push(tmpitem);
+		}
+	}
+	
+	function addItem(){
+		if(itemPicked){
+			tempx = Math.random() * (theCanvas.width - 50);
+			tempy = Math.random() * (theCanvas.height - 50);
+			tempid = Math.floor(Math.random() * 20) +1;
+			item = {id: tempid  ,x: tempx < 20 ? 20 : tempx, y: tempy < 35 ? 50 : tempy, radius: 8};
+			itemPicked = false;
+			itemImage.src = item.id + ".png";
+			setTimeout(removeItem, 10000);
+		};
+	}
+	
+	function addFlag(){
+		tempx = Math.random() * (theCanvas.width - 50);
+		tempy = Math.random() * (theCanvas.height - 50);
+		tempid = Math.floor(Math.random() * 20) +1;
+		flag = {id: tempid  ,x: tempx < 20 ? 20 : tempx, y: tempy < 35 ? 50 : tempy, radius: 8};
+	}
+	
+	function removeItem(){
+		itemPicked = true;
+		setTimeout(addItem, 3000);
+	}
+	
+	function additem(){
+		//console.log(item.id);
+		//console.log("a");
+		if(item.id <= 10){
+			for(int = 1; i<=growSize*2; i++){
+				var newitem = {id : items.length, radius: items[0].radius, x: items[items.length - 1].x, 
+								y: items[items.length - 1].y, angle:items[items.length - 1].angle};
+				items[items.length] = newitem;
+			}
+		}else{
+			//todo remove items from array
+			itemsToRemove = growSize >= items.length - growSize  ?  items.length - growSize : growSize ;
+			//console.log("length: "  + items.length);
+			//console.log("to remove: "  + itemsToRemove);
+			for(timesRemove = 1; timesRemove <= itemsToRemove; timesRemove++){
+				items.pop();
+			}
+		}
+	}
+	
+	function hitTest(item1,item2) {
+		var retval = false;
+		var dx = item1.x - item2.x;
+		var dy = item1.y - item2.y;
+		var distance = Math.sqrt(dx * dx + dy * dy);
+		if (distance <= item1.radius + item2.radius) {
+			retval = true;
+		}
+		return retval;
+	}
+	
+	window.addEventListener('keyup', eventKeyUp, false);
+	function eventKeyUp(e){
+		//console.log(e.keyCode);
+		switch(e.keyCode){
+			case 37:
+				if(items[0].angle == 0) return;
+				items[0].angle = 180;
+				break;
+			case 38:
+				if(items[0].angle == 90) return;
+				items[0].angle = 270;
+				break;
+			case 39:
+				if(items[0].angle == 180) return;
+				items[0].angle = 0;
+				break;
+			case 40:
+				if(items[0].angle == 270) return;
+				items[0].angle = 90;
+				break;
+			case 13:
+				//additem();
+				console.log(items.length);
+				break;
+		}//switch
+	}//keyup
+	
+	var startButton = document.getElementById("start");
+	startButton.addEventListener("click", onStartClick, false);
+	function onStartClick(){
+		this.disabled = true;
+		levelStart();
+	}
+}
+
+
+
+</script>
+</head>
+<body>
+	<div style="position: absolute; top: 50px; left: 50px;">
+		<canvas id="canvasOne" width="400" height="270">
+		Your browser does not support HTML5 Canvas.
+		</canvas>
+		<form>
+		<input type="button" value="Start" id="start" />
+		</form>
+	</div>
+	<div class="gameinfo">
+		<strong>Game description</strong>
+		<div class="section">
+		<p>
+			Harry is a healthy worm who really cares about what he eats. He will get bigger each time that eats an 
+			unhealthy item, and will get smaller every time that eats a healthy one. 
+			Items will appear on the screen and will remain there for some seconds before they disappear; 
+			Harry needs to touch them with his head to eat them.
+		</p>
+		<p>
+			Harry can go across the boundaries of the game area, but he is not allowed to collide with himself.
+		</p>
+		<p>
+			Every 10 eaten items, a flag will appear that once eaten will take you to the next level. At every level,
+			Harry's speed will increase.
+		</p>
+		</div>
+		<strong>Healthy items</strong>
+		<div  class="section">
+		<img src="11.png" />
+		<img src="12.png" />
+		<img src="13.png" />
+		<img src="14.png" />
+		<img src="15.png" />
+		<img src="16.png" />
+		<img src="17.png" />
+		<img src="18.png" />
+		<img src="19.png" />
+		<img src="20.png" />
+		</div>
+		<strong>Unhealthy items</strong>
+		<div  class="section">
+		<img src="1.png" />
+		<img src="2.png" />
+		<img src="3.png" />
+		<img src="4.png" />
+		<img src="5.png" />
+		<img src="6.png" />
+		<img src="7.png" />
+		<img src="8.png" />
+		<img src="9.png" />
+		<img src="10.png" />
+		</div>
+	</div>
+	</body>
+</html>
